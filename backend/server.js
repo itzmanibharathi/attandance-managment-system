@@ -11,45 +11,53 @@ const socketIo = require('socket.io');
 
 dotenv.config();
 
-const serviceAccountPath = process.env.FIREBASE_CRED;
-if (!serviceAccountPath) {
-  console.error('FIREBASE_CRED not set in .env');
+// 🔹 Updated Firebase initialization
+const serviceAccountJson = process.env.FIREBASE_CRED;
+if (!serviceAccountJson) {
+  console.error('FIREBASE_CRED not set in .env or Render environment variables.');
   process.exit(1);
 }
 
 let db;
 try {
+  const serviceAccount = JSON.parse(serviceAccountJson);
+
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountPath),
+    credential: admin.credential.cert(serviceAccount),
   });
   db = admin.firestore();
-  console.log('Firebase connected successfully');
+  console.log('✅ Firebase connected successfully');
 } catch (error) {
-  console.error('Firebase initialization failed:', error.message);
+  console.error('❌ Firebase initialization failed:', error.message);
   process.exit(1);
 }
 
+// Cloudinary setup
 try {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
-  console.log('Cloudinary connected successfully');
+  console.log('✅ Cloudinary connected successfully');
 } catch (error) {
-  console.error('Cloudinary config failed:', error.message);
+  console.error('❌ Cloudinary config failed:', error.message);
   process.exit(1);
 }
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: 'http://localhost:3001', methods: ['GET', 'POST'], credentials: true },
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:3001',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: 'http://localhost:3001', credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3001', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
