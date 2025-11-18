@@ -43,7 +43,7 @@ const Dashboard = () => {
       ? `?start=${startDate.toISOString().split('T')[0]}&end=${endDate.toISOString().split('T')[0]}`
       : '';
     try {
-      const res = await axios.get(`http://localhost:3000/attendance/overall${params}`);
+      const res = await axios.get(`https://attandance-managment-system-1.onrender.com/attendance/overall${params}`);
       setData(res.data);
     } catch {
       toast.error('Failed to load dashboard');
@@ -234,5 +234,6 @@ const Dashboard = () => {
     </div>
   );
 };
+
 
 export default Dashboard;
