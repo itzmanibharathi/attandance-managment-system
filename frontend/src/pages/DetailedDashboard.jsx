@@ -21,9 +21,9 @@ const DetailedDashboard = () => {
     const params = startDate && endDate ? `?start=${startDate.toISOString().split('T')[0]}&end=${endDate.toISOString().split('T')[0]}` : '';
     try {
       const [o, t, l] = await Promise.all([
-        axios.get(`http://localhost:3000/attendance/overall${params}`),
-        axios.get(`http://localhost:3000/attendance/topbottom${params}`),
-        axios.get(`http://localhost:3000/attendance/locations${params}`)
+        axios.get(`https://attandance-managment-system-1.onrender.com/attendance/overall${params}`),
+        axios.get(`https://attandance-managment-system-1.onrender.com/attendance/topbottom${params}`),
+        axios.get(`https://attandance-managment-system-1.onrender.com/attendance/locations${params}`)
       ]);
       setOverall(o.data);
       setTopBottom(t.data);
@@ -36,7 +36,7 @@ const DetailedDashboard = () => {
   const searchStudents = async () => {
     if (!searchTerm.trim()) return setStudents([]);
     try {
-      const res = await axios.get(`http://localhost:3000/students/search?q=${encodeURIComponent(searchTerm)}`);
+      const res = await axios.get(`https://attandance-managment-system-1.onrender.com/students/search?q=${encodeURIComponent(searchTerm)}`);
       setStudents(res.data);
     } catch { toast.error('Search failed'); }
   };
@@ -44,7 +44,7 @@ const DetailedDashboard = () => {
   const fetchHistory = async (regno) => {
     const params = startDate && endDate ? `?start=${startDate.toISOString().split('T')[0]}&end=${endDate.toISOString().split('T')[0]}` : '';
     try {
-      const { data } = await axios.get(`http://localhost:3000/attendance/history/${regno}${params}`);
+      const { data } = await axios.get(`https://attandance-managment-system-1.onrender.com/attendance/history/${regno}${params}`);
       setHistory(data);
     } catch { toast.error('Failed to load history'); }
   };
@@ -174,5 +174,6 @@ const DetailedDashboard = () => {
     </div>
   );
 };
+
 
 export default DetailedDashboard;
