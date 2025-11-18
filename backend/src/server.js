@@ -44,12 +44,12 @@ try {
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: 'http://localhost:3001', methods: ['GET', 'POST'], credentials: true },
+  cors: { origin: 'https://attandance-managment-system-three.vercel.app', methods: ['GET', 'POST'], credentials: true },
 });
 
 const PORT = 3000;
 
-app.use(cors({ origin: 'http://localhost:3001', credentials: true }));
+app.use(cors({ origin: 'https://attandance-managment-system-three.vercel.app', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
