@@ -36,7 +36,7 @@ const Students = () => {
   const fetchHistory = async (regno) => {
     const params = startDate && endDate ? `?start=${startDate.toISOString().split('T')[0]}&end=${endDate.toISOString().split('T')[0]}` : '';
     try {
-      const { data } = await axios.get(`http://localhost:3000/attendance/history/${regno}${params}`);
+      const { data } = await axios.get(`https://attandance-managment-system-1.onrender.com/attendance/history/${regno}${params}`);
       setHistory(data);
     } catch { toast.error('Failed to load history'); }
   };
@@ -71,8 +71,8 @@ const Students = () => {
 
     try {
       editingId
-        ? await axios.put(`http://localhost:3000/students/${editingId}`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
-        : await axios.post('http://localhost:3000/students', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+        ? await axios.put(`https://attandance-managment-system-1.onrender.com/students/${editingId}`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+        : await axios.post('https://attandance-managment-system-1.onrender.com/students', data, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success(editingId ? 'Updated!' : 'Added!');
       resetForm();
       fetchStudents();
@@ -81,7 +81,7 @@ const Students = () => {
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this student?')) return;
-    await axios.delete(`http://localhost:3000/students/${selectedStudent.id}`);
+    await axios.delete(`https://attandance-managment-system-1.onrender.com/students/${selectedStudent.id}`);
     toast.success('Deleted');
     fetchStudents();
     setSelectedStudent(null);
@@ -282,5 +282,6 @@ const Students = () => {
     </div>
   );
 };
+
 
 export default Students;
