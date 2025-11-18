@@ -4,46 +4,13 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const dotenv = require('dotenv');
-const admin = require('firebase-admin');
 const fs = require('fs');
 const http = require('http');
 const socketIo = require('socket.io');
+const { initializeApp } = require('firebase/app');
+const { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } = require('firebase/firestore');
 
 dotenv.config();
-
-// 🔹 Updated Firebase initialization
-const serviceAccountJson = process.env.FIREBASE_CRED;
-if (!serviceAccountJson) {
-  console.error('FIREBASE_CRED not set in .env or Render environment variables.');
-  process.exit(1);
-}
-
-let db;
-try {
-  const serviceAccount = JSON.parse(serviceAccountJson);
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  db = admin.firestore();
-  console.log('✅ Firebase connected successfully');
-} catch (error) {
-  console.error('❌ Firebase initialization failed:', error.message);
-  process.exit(1);
-}
-
-// Cloudinary setup
-try {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-  console.log('✅ Cloudinary connected successfully');
-} catch (error) {
-  console.error('❌ Cloudinary config failed:', error.message);
-  process.exit(1);
-}
 
 const app = express();
 const server = http.createServer(app);
@@ -63,12 +30,41 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 const upload = multer({ dest: 'uploads/' });
 
+// ── FIREBASE WEB SDK INIT ────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID,
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+console.log('✅ Firebase Web SDK initialized');
+
+// ── CLOUDINARY SETUP ─────────────────────────────────────────────────────
+try {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  console.log('✅ Cloudinary connected successfully');
+} catch (error) {
+  console.error('❌ Cloudinary config failed:', error.message);
+  process.exit(1);
+}
+
+// ── SOCKET.IO CONNECTION ─────────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.log('Client connected');
   socket.on('disconnect', () => console.log('Client disconnected'));
 });
 
-// ── HELPER FUNCTIONS ───────────────────────────────────────────────────────
+// ── HELPER FUNCTIONS ─────────────────────────────────────────────────────
 const safeString = (val) => (val && typeof val === 'string') ? val.trim() : '';
 const safeDate = (val) => {
   const s = safeString(val);
@@ -96,7 +92,7 @@ const secondsToHMS = (sec) => {
 // ── CRUD: Students ────────────────────────────────────────────────────────
 app.get('/students', async (req, res) => {
   try {
-    const snap = await db.collection('students').get();
+    const snap = await getDocs(collection(db, 'students'));
     const students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     res.json(students);
   } catch (error) {
@@ -110,7 +106,7 @@ app.get('/students/search', async (req, res) => {
     const lowerQ = q.toLowerCase().trim();
     if (!lowerQ) return res.json([]);
 
-    const snap = await db.collection('students').get();
+    const snap = await getDocs(collection(db, 'students'));
     const results = snap.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .filter(s => {
@@ -133,7 +129,7 @@ app.post('/students', upload.single('photo'), async (req, res) => {
       photoUrl = result.secure_url;
       fs.unlinkSync(req.file.path);
     }
-    const docRef = await db.collection('students').add({
+    const docRef = await addDoc(collection(db, 'students'), {
       Name, Gender, RegNo, Phone, Email, BloodGroup, Department, DOB, photo: photoUrl
     });
     res.json({ id: docRef.id, message: 'Student added' });
@@ -151,7 +147,7 @@ app.put('/students/:id', upload.single('photo'), async (req, res) => {
       data.photo = result.secure_url;
       fs.unlinkSync(req.file.path);
     }
-    await db.collection('students').doc(id).update(data);
+    await updateDoc(doc(db, 'students', id), data);
     res.json({ message: 'Student updated' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -161,23 +157,21 @@ app.put('/students/:id', upload.single('photo'), async (req, res) => {
 app.delete('/students/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await db.collection('students').doc(id).delete();
+    await deleteDoc(doc(db, 'students', id));
     res.json({ message: 'Student deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ── Attendance ─────────────────────────────────────────────────────────────
+// ── ATTENDANCE ROUTES ─────────────────────────────────────────────────────
 app.post('/attendance', async (req, res) => {
   try {
     const { RegNo, Date, Status, Reason, TimeIn, TimeOut, Location } = req.body;
-    if (!RegNo || !Date || !Status) {
-      return res.status(400).json({ error: 'RegNo, Date, Status required' });
-    }
+    if (!RegNo || !Date || !Status) return res.status(400).json({ error: 'RegNo, Date, Status required' });
     const dateStr = Date.replace(/-/g, '');
     const id = `_${dateStr}_${RegNo}`;
-    await db.collection('attendance').doc(id).set({
+    await updateDoc(doc(db, 'attendance', id), {
       RegNo, Date, Status, Reason: Reason || '', TimeIn: TimeIn || '', TimeOut: TimeOut || '', Location: Location || ''
     });
     io.emit('attendanceUpdate');
@@ -190,7 +184,7 @@ app.post('/attendance', async (req, res) => {
 app.put('/attendance/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await db.collection('attendance').doc(id).update(req.body);
+    await updateDoc(doc(db, 'attendance', id), req.body);
     io.emit('attendanceUpdate');
     res.json({ message: 'Attendance updated' });
   } catch (error) {
@@ -395,3 +389,4 @@ app.get('/', (req, res) => {
 server.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
+
