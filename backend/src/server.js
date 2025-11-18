@@ -44,12 +44,12 @@ console.log('✅ Firebase Web SDK initialized successfully');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: process.env.CLIENT_URL || 'http://localhost:3001', methods: ['GET','POST'], credentials: true },
+  cors: { origin: process.env.CLIENT_URL || 'https://attandance-managment-system-three.vercel.app', methods: ['GET','POST'], credentials: true },
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3001', credentials: true }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'https://attandance-managment-system-three.vercel.app', credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -317,3 +317,4 @@ app.get('/attendance/locations', async (req,res)=>{
 app.get('/',(req,res)=>{ res.send('Backend is running! Firebase Web SDK & Cloudinary connected.'); });
 
 server.listen(PORT,()=>{ console.log(`Backend running on port ${PORT}`); });
+
